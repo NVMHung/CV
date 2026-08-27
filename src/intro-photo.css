@@ -1,0 +1,1 @@
+.gate-photo{position:absolute;z-index:4;width:190px;height:190px;object-fit:cover;object-position:19% 37%;border:3px solid #10100f;border-radius:50%;box-shadow:9px 9px 0 #10100f;opacity:0;pointer-events:none}.intro-gate.is-launching .gate-photo{display:block}@media(max-width:600px){.gate-photo{width:160px;height:160px}}
