@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './terminal-portfolio.css';
 import './effects.css';
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTR7pnyeeeFMUgBzGzO91nIrgUEj9MUcySYxQ0Br83E4rGHOu9NO1TxmMNP2BMk2w/exec';
 
 const projects = [
   ['01', 'Unity / Creative App', 'appTomau2', 'A Unity drawing and colouring app built around simple, accessible creative play.', ['Unity', 'C#', 'UI'], '◈', 'https://github.com/NVMHung/appTomau2', 'https://res.cloudinary.com/xxxfhnih/video/upload/v1787821110/apptomau-review.mp4', 'https://res.cloudinary.com/xxxfhnih/video/upload/v1787821111/apptomau2.mp4', 'Designed and implemented a lightweight drawing experience: user input, colour selection, brush interaction, and a clear Unity UI flow for approachable creative play.', [['00:00', 0, 'App overview'], ['00:12', 12, 'Drawing interaction'], ['00:28', 28, 'Colouring workflow']]],
@@ -508,7 +509,9 @@ function App() {
   const [modalClosing, setModalClosing] = useState(false);
   const [modalOrigin, setModalOrigin] = useState({ x: 0, y: 0 });
   const [skillsVisible, setSkillsVisible] = useState(false);
-  const [sent, setSent] = useState(false);
+ const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [contactError, setContactError] = useState('');
   const [matrixOn, setMatrixOn] = useState(false);
 
   const skillGridRef = useRef(null);
@@ -606,17 +609,42 @@ function App() {
     window.setTimeout(() => { setModalProject(null); setModalClosing(false); }, 480);
   };
 
-  const handleContactSubmit = (event) => {
-    event.preventDefault();
+const handleContactSubmit = async (event) => {
+  event.preventDefault();
+  setContactError('');
+
+  const form = event.target;
+  const name = form.name.value.trim();
+  const email = form.email.value.trim();
+  const message = form.message.value.trim();
+
+  setSending(true);
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // tránh CORS preflight với Apps Script
+      body: JSON.stringify({ name, email, message }),
+    });
+    const data = await res.json();
+
+    if (data.result !== 'success') {
+      throw new Error(data.message || 'Gửi thất bại, thử lại sau.');
+    }
+
     setSent(true);
     const btn = sendBtnRef.current;
     if (btn) {
       const rect = btn.getBoundingClientRect();
       burstConfetti(rect.left + rect.width / 2, rect.top);
     }
-    event.target.reset();
+    form.reset();
     window.setTimeout(() => setSent(false), 3500);
-  };
+  } catch (err) {
+    setContactError(err.message || 'Không thể gửi tin nhắn. Kiểm tra kết nối mạng.');
+  } finally {
+    setSending(false);
+  }
+};
 
   return <>
     <canvas ref={bgGridRef} className="bg-grid" />
@@ -637,7 +665,16 @@ function App() {
         <div className="project-grid">{projects.map(([id, type, title, text, tags, mark, github, preview, walkthrough, scope, chapters]) => <ProjectCard key={id} id={id} type={type} title={title} text={text} tags={tags} mark={mark} github={github} preview={preview} walkthrough={walkthrough} scope={scope} chapters={chapters} onOpen={openWalkthrough} />)}</div>
         <SectionEnd label="projects.json" />
       </section>
-      <section id="contact"><p className="eyebrow reveal">contact</p><h2 className="reveal">Let’s build<br /><em>something fun.</em></h2><div className="contact-panel reveal"><div><h3>Say hello</h3><p>Have a project in mind? I’m open to creating thoughtful games and <b className="hl">dependable systems</b>.</p><a href="mailto:your.email@example.com">✉ manhhung.nvm@gmail.com</a><a href="https://github.com/NVMHung" target="_blank" rel="noreferrer">⌘ github.com/NVMHung</a><a href="tel:+819000000000">☎ +81 070-9064-0879</a></div><form onSubmit={handleContactSubmit}><label>$ name<input placeholder="Your name" required /></label><label>$ email<input type="email" placeholder="you@email.com" required /></label><label>$ message<textarea placeholder="Tell me about your project" required /></label><button type="submit" ref={sendBtnRef}>./send_message.sh <b>→</b></button><div className={`send-status ${sent ? 'show' : ''}`}>✔ Message sent — I’ll get back to you soon.</div></form></div><SectionEnd label="contact.sh" /></section>
+      <section id="contact"><p className="eyebrow reveal">contact</p><h2 className="reveal">Let’s build<br /><em>something fun.</em></h2><div className="contact-panel reveal"><div><h3>Say hello</h3><p>Have a project in mind? I’m open to creating thoughtful games and <b className="hl">dependable systems</b>.</p><a href="mailto:your.email@example.com">✉ manhhung.nvm@gmail.com</a><a href="https://github.com/NVMHung" target="_blank" rel="noreferrer">⌘ github.com/NVMHung</a><a href="tel:+819000000000">☎ +81 070-9064-0879</a></div><form onSubmit={handleContactSubmit}>
+  <label>$ name<input name="name" placeholder="Your name" required /></label>
+  <label>$ email<input name="email" type="email" placeholder="you@email.com" required /></label>
+  <label>$ message<textarea name="message" placeholder="Tell me about your project" required /></label>
+  <button type="submit" ref={sendBtnRef} disabled={sending}>
+    {sending ? './sending...' : './send_message.sh'} <b>→</b>
+  </button>
+  {contactError && <div className="send-status show error">✖ {contactError}</div>}
+  <div className={`send-status ${sent ? 'show' : ''}`}>✔ Message sent — I'll get back to you soon.</div>
+</form></div><SectionEnd label="contact.sh" /></section>
     </main><footer>© 2026 NVMHUNG — DESIGNED FOR PLAY + PURPOSE</footer></>;
 }
 createRoot(document.getElementById('root')).render(<App />);
